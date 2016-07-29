@@ -1,0 +1,110 @@
+# -*- coding: utf-8 -*-
+
+import urllib2
+#import urllib
+import re
+import thread
+import time
+import matplotlib.pyplot as plt
+
+import numpy as np
+
+import PIL.ImageFile as ImageFile
+
+
+class Spider_Model:
+
+    def __init__(self):
+        self.page = int(raw_input(u'input the page：\n')) 
+        self.pages = []
+        self.enable = False
+      
+      
+    def ShowPic(self,urllink):
+        response=urllib2.Request(urllink)   
+        fp=urllib2.urlopen(response)        #打开网络图像文件句柄
+        p = ImageFile.Parser()              #定义图像IO
+        while 1:                                     #开始图像读取
+            s = fp.read(1024)
+            if not s:
+                break
+            p.feed(s)
+        im = p.close()                           #得到图像
+        arr=np.array(im)                       #将图像转换成numpy矩阵
+        print np.shape(arr)                   #显示矩阵的维数
+        plt.imshow(im)                         #显示图像
+
+    def GetPage(self,page):
+        myUrl = "http://www.qiushibaike.com/hot/page/" + page
+        user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2504.0 Safari/537.36'
+        headers = { 'User-Agent' : user_agent }
+        req = urllib2.Request(myUrl, headers = headers)
+        myResponse = urllib2.urlopen(req)
+        myPage = myResponse.read()
+
+        unicodePage = myPage#.decode("utf-8","ignore")
+
+        
+
+        myPics = re.findall('target="_blank">\n<img src="(.*?)" alt="',unicodePage,re.S | re.M)
+        items = []
+        for item in myPics:
+            items.append(item.replace("<br/>","\n"))
+        return items
+
+
+    def LoadPage(self):
+        while self.enable:
+            if len(self.pages) < 2:
+                try:
+                    myPage = self.GetPage(str(self.page))
+                    self.page += 1
+                    self.pages.append(myPage)
+                except Exception as e:
+                    print 'except:', e
+                    print 'can not connect！'
+
+            else:
+                time.sleep(1)
+                #don't need to add more
+
+    def ShowPage(self,nowPage,page):
+        for items in nowPage:
+            self.ShowPic(items)
+            myInput = raw_input()
+            if myInput == "quit":
+                self.enable = False
+                break
+
+            
+    def Start(self):
+        self.enable = True
+        page = self.page
+
+        print u'正在加载中请稍候......'
+
+        thread.start_new_thread(self.LoadPage,())
+
+        while self.enable:
+            if self.pages:
+                nowPage = self.pages[0]
+                del self.pages[0]
+                self.ShowPage(nowPage,page)
+                page += 1
+
+    
+
+print """----------------------
+----------------------
+--====----------====--
+----------------------
+---|0|----------|0|---
+----------------------
+----------|+|---------
+----------------------
+----------------------
+------~~~~~~~~~~------
+----------------------
+----------------------"""
+myModel = Spider_Model()
+myModel.Start()
